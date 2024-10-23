@@ -1,39 +1,56 @@
 #!/usr/bin/python3
 """
-Log parsing
+Script that parses logs from stdin and prints statistics.
 """
 
 import sys
 
-if __name__ == '__main__':
+# Initialize counters
+total_file_size = 0
+status_codes_count = {
+    "200": 0, "301": 0, "400": 0, "401": 0,
+    "403": 0, "404": 0, "405": 0, "500": 0
+}
 
-    filesize, count = 0, 0
-    codes = ["200", "301", "400", "401", "403", "404", "405", "500"]
-    stats = {k: 0 for k in codes}
+def print_stats():
+    """
+    Prints the accumulated statistics of file size and status codes.
+    """
+    print("File size: {}".format(total_file_size))
+    for code in sorted(status_codes_count.keys()):
+        if status_codes_count[code] > 0:
+            print("{}: {}".format(code, status_codes_count[code]))
 
-    def print_stats(stats: dict, file_size: int) -> None:
-        print("File size: {:d}".format(filesize))
-        for k, v in sorted(stats.items()):
-            if v:
-                print("{}: {}".format(k, v))
+# Read log lines from stdin
+line_count = 0
 
-    try:
-        for line in sys.stdin:
-            count += 1
-            data = line.split()
+try:
+    for line in sys.stdin:
+        line_count += 1
+        parts = line.split()
+
+        # Ensure the line contains the expected number of elements
+        if len(parts) > 6:
+            # Parse file size
             try:
-                status_code = data[-2]
-                if status_code in stats:
-                    stats[status_code] += 1
-            except BaseException:
+                file_size = int(parts[-1])
+                total_file_size += file_size
+            except Exception:
                 pass
-            try:
-                filesize += int(data[-1])
-            except BaseException:
-                pass
-            if count % 10 == 0:
-                print_stats(stats, filesize)
-        print_stats(stats, filesize)
-    except KeyboardInterrupt:
-        print_stats(stats, filesize)
-        raise
+
+            # Parse status code
+            status_code = parts[-2]
+            if status_code in status_codes_count:
+                status_codes_count[status_code] += 1
+
+        # Print stats every 10 lines
+        if line_count % 10 == 0:
+            print_stats()
+
+except KeyboardInterrupt:
+    # Handle the Ctrl+C case, print stats
+    print_stats()
+    raise
+
+# Print final stats after exiting the loop
+print_stats()
