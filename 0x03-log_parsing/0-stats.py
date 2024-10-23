@@ -1,56 +1,50 @@
 #!/usr/bin/python3
 """
-Script that parses logs from stdin and prints statistics.
+log parsing
 """
 
 import sys
+import re
 
-# Initialize counters
-total_file_size = 0
-status_codes_count = {
-    "200": 0, "301": 0, "400": 0, "401": 0,
-    "403": 0, "404": 0, "405": 0, "500": 0
-}
 
-def print_stats():
+def output(log: dict) -> None:
     """
-    Prints the accumulated statistics of file size and status codes.
+    helper function to display stats
     """
-    print("File size: {}".format(total_file_size))
-    for code in sorted(status_codes_count.keys()):
-        if status_codes_count[code] > 0:
-            print("{}: {}".format(code, status_codes_count[code]))
+    print("File size: {}".format(log["file_size"]))
+    for code in sorted(log["code_frequency"]):
+        if log["code_frequency"][code]:
+            print("{}: {}".format(code, log["code_frequency"][code]))
 
-# Read log lines from stdin
-line_count = 0
 
-try:
-    for line in sys.stdin:
-        line_count += 1
-        parts = line.split()
+if __name__ == "__main__":
+    regex = re.compile(
+    r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} - \[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d+\] "GET /projects/260 HTTP/1.1" (.{3}) (\d+)')  # nopep8
 
-        # Ensure the line contains the expected number of elements
-        if len(parts) > 6:
-            # Parse file size
-            try:
-                file_size = int(parts[-1])
-                total_file_size += file_size
-            except Exception:
-                pass
+    line_count = 0
+    log = {}
+    log["file_size"] = 0
+    log["code_frequency"] = {
+        str(code): 0 for code in [
+            200, 301, 400, 401, 403, 404, 405, 500]}
 
-            # Parse status code
-            status_code = parts[-2]
-            if status_code in status_codes_count:
-                status_codes_count[status_code] += 1
+    try:
+        for line in sys.stdin:
+            line = line.strip()
+            match = regex.fullmatch(line)
+            if (match):
+                line_count += 1
+                code = match.group(1)
+                file_size = int(match.group(2))
 
-        # Print stats every 10 lines
-        if line_count % 10 == 0:
-            print_stats()
+                # File size
+                log["file_size"] += file_size
 
-except KeyboardInterrupt:
-    # Handle the Ctrl+C case, print stats
-    print_stats()
-    raise
+                # status code
+                if (code.isdecimal()):
+                    log["code_frequency"][code] += 1
 
-# Print final stats after exiting the loop
-print_stats()
+                if (line_count % 10 == 0):
+                    output(log)
+    finally:
+        output(log)
