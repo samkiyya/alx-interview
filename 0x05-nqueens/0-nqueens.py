@@ -1,62 +1,113 @@
 #!/usr/bin/python3
-"""N QUEENS ALGORITHM WITH BACKTRACKING (RECURSION INSIDE LOOP)"""
+"""N queens solution finder module.
+"""
 import sys
 
 
-class NQueen:
-    """Class for solving the N-Queen Problem"""
+solutions = []
+"""The list of possible solutions to the N queens problem.
+"""
+n = 0
+"""The size of the chessboard.
+"""
+pos = None
+"""The list of possible positions on the chessboard.
+"""
 
-    def __init__(self, n):
-        """Initialize the board size and solution storage"""
-        self.n = n
-        self.x = [0 for _ in range(n + 1)]
-        self.res = []
 
-    def place(self, k, i):
-        """
-        Check if the k-th queen can be placed in the i-th column.
-        Ensures no queens are in the same row or diagonal.
-        """
-        for j in range(1, k):
-            if self.x[j] == i or abs(self.x[j] - i) == abs(j - k):
-                return False
+def get_input():
+    """Retrieves and validates this program's argument.
+
+    Returns:
+        int: The size of the chessboard.
+    """
+    global n
+    n = 0
+    if len(sys.argv) != 2:
+        print("Usage: nqueens N")
+        sys.exit(1)
+    try:
+        n = int(sys.argv[1])
+    except Exception:
+        print("N must be a number")
+        sys.exit(1)
+    if n < 4:
+        print("N must be at least 4")
+        sys.exit(1)
+    return n
+
+
+def is_attacking(pos0, pos1):
+    """Checks if the positions of two queens are in an attacking mode.
+
+    Args:
+        pos0 (list or tuple): The first queen's position.
+        pos1 (list or tuple): The second queen's position.
+
+    Returns:
+        bool: True if the queens are in an attacking position else False.
+    """
+    if (pos0[0] == pos1[0]) or (pos0[1] == pos1[1]):
         return True
-
-    def n_queen(self, k):
-        """
-        Attempts to place queens on the board starting from the k-th queen.
-        Uses recursion and backtracking to find all solutions.
-        """
-        for i in range(1, self.n + 1):
-            if self.place(k, i):
-                self.x[k] = i
-                if k == self.n:
-                    solution = [[j - 1, self.x[j] - 1] for j in range(1, self.n + 1)]
-                    self.res.append(solution)
-                else:
-                    self.n_queen(k + 1)
-        return self.res
+    return abs(pos0[0] - pos1[0]) == abs(pos0[1] - pos1[1])
 
 
-# Main script execution
-if len(sys.argv) != 2:
-    print("Usage: nqueens N")
-    sys.exit(1)
+def group_exists(group):
+    """Checks if a group exists in the list of solutions.
 
-try:
-    N = int(sys.argv[1])
-except ValueError:
-    print("N must be a number")
-    sys.exit(1)
+    Args:
+        group (list of integers): A group of possible positions.
 
-if N < 4:
-    print("N must be at least 4")
-    sys.exit(1)
+    Returns:
+        bool: True if it exists, otherwise False.
+    """
+    global solutions
+    for stn in solutions:
+        i = 0
+        for stn_pos in stn:
+            for grp_pos in group:
+                if stn_pos[0] == grp_pos[0] and stn_pos[1] == grp_pos[1]:
+                    i += 1
+        if i == n:
+            return True
+    return False
 
-# Initialize and solve the N-Queens problem
-queen = NQueen(N)
-solutions = queen.n_queen(1)
 
-# Output each solution in the specified format
+def build_solution(row, group):
+    """Builds a solution for the n queens problem.
+
+    Args:
+        row (int): The current row in the chessboard.
+        group (list of lists of integers): The group of valid positions.
+    """
+    global solutions
+    global n
+    if row == n:
+        tmp0 = group.copy()
+        if not group_exists(tmp0):
+            solutions.append(tmp0)
+    else:
+        for col in range(n):
+            a = (row * n) + col
+            matches = zip(list([pos[a]]) * len(group), group)
+            used_positions = map(lambda x: is_attacking(x[0], x[1]), matches)
+            group.append(pos[a].copy())
+            if not any(used_positions):
+                build_solution(row + 1, group)
+            group.pop(len(group) - 1)
+
+
+def get_solutions():
+    """Gets the solutions for the given chessboard size.
+    """
+    global pos, n
+    pos = list(map(lambda x: [x // n, x % n], range(n ** 2)))
+    a = 0
+    group = []
+    build_solution(a, group)
+
+
+n = get_input()
+get_solutions()
 for solution in solutions:
     print(solution)
